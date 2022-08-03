@@ -2,27 +2,26 @@
 // Created by Cu1 on 2022/8/2.
 //
 
-#ifndef ZEPHYR_POOL_ALLOC_H
-#define ZEPHYR_POOL_ALLOC_H
+#ifndef ZEPHYR_POOL_ALLOC_HPP
+#define ZEPHYR_POOL_ALLOC_HPP
 
 #include <new>
 #include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 namespace zephyr
 {
 
-union Obj {
-    union Obj* free_list_next;
-    char data[1];
+struct Obj {
+    Obj* free_list_next;
 };
 
 enum { Z_align = 8 };
 enum { Z_max_bytes = 128 };
 enum { Z_free_list_size = Z_max_bytes / Z_align };
 
-class pool_alloc
-{
+class pool_alloc {
 private:
 
     static char* Z_heap_start;
@@ -38,7 +37,7 @@ public:
     static void deallocate(void* p, size_t n);
     static void* reallocate(void* p, size_t old_size, size_t new_size);
 private:
-    static size_t Z_align(size_t bytes);
+    static size_t Z_round_up(size_t bytes);
     static void*  Z_refill(size_t n);
     static size_t Z_freelist_index(size_t bytes);
     static char*  Z_chunk_alloc(size_t size, size_t& nblock);
@@ -47,12 +46,14 @@ private:
 char* pool_alloc::Z_heap_start = nullptr;
 char* pool_alloc::Z_heap_end = nullptr;
 size_t pool_alloc::Z_heap_size = 0;
+
 Obj* pool_alloc::Z_free_list[Z_free_list_size] = {
     nullptr, nullptr, nullptr, nullptr,
     nullptr, nullptr, nullptr, nullptr,
     nullptr, nullptr, nullptr, nullptr,
     nullptr, nullptr, nullptr, nullptr,
 };
+
 size_t pool_alloc::Z_align_size_list[Z_free_list_size] = {
         8, 16, 24, 32, 40, 48, 56, 64,
         72, 80, 88, 96, 104, 112, 120, 128,
@@ -64,7 +65,7 @@ inline void* pool_alloc::allocate(size_t n) {
     Obj*& free_list_index = Z_free_list[Z_freelist_index(n)];
     Obj* result = free_list_index;
     if (result == nullptr) {
-        void* r = Z_refill(Z_align(n));
+        void* r = Z_refill(Z_round_up(n));
         return r;
     }
     free_list_index = result->free_list_next;
@@ -86,7 +87,7 @@ inline void* pool_alloc::reallocate(void* p, size_t old_size, size_t new_size) {
     return allocate(new_size);
 }
 
-inline size_t pool_alloc::Z_align(size_t bytes) {
+inline size_t pool_alloc::Z_round_up(size_t bytes) {
     size_t l = 0, r = 15, res = 0;
     while (l <= r) {
         int mid = (l + r) >> 1;
@@ -100,7 +101,7 @@ inline size_t pool_alloc::Z_align(size_t bytes) {
 }
 
 inline size_t pool_alloc::Z_freelist_index(size_t bytes) {
-    return Z_align(bytes) / 8 - 1;
+    return Z_round_up(bytes) / 8 - 1;
 }
 
 
@@ -144,12 +145,12 @@ char* pool_alloc::Z_chunk_alloc(size_t size, size_t& nblock) {
         static_cast<Obj*>(Z_heap_start)->free_list_next = Z_free_list[Z_freelist_index(heap_size)];
         Z_free_list[Z_freelist_index(heap_size)] = static_cast<Obj*>(Z_heap_start);
     }
-    size_t require_size = (need_size << 1) + Z_align(heap_size >> 4);
+    size_t require_size = (need_size * 20) << 1;
     Z_heap_start = (char*) malloc(require_size);
     if (Z_heap_start == nullptr) {
         Obj* p;
         for (size_t i = size; i <= Z_max_bytes; i += Z_align) {
-            Obj*& free_list_index = Z_free_list[Z_align(i)];
+            Obj*& free_list_index = Z_free_list[i / 8 - 1];
             p = free_list_index;
             if (p) {
                 free_list_index->free_list_next = p->free_list_next;
@@ -167,8 +168,7 @@ char* pool_alloc::Z_chunk_alloc(size_t size, size_t& nblock) {
     return Z_chunk_alloc(size, nblock);
 }
 
-
 }
 
 
-#endif //ZEPHYR_POOL_ALLOC_H
+#endif //ZEPHYR_POOL_ALLOC_HPP
