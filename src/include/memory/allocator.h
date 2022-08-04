@@ -6,6 +6,7 @@
 #define ZEPHYR_ALLOCATOR_H
 
 #include "pool_alloc.hpp"
+#include "construct.h"
 
 // 这个头文件包含一个模板类 allocator，用于管理内存的分配、释放，对象的构造、析构
 
@@ -37,13 +38,72 @@ public:
     static void construct(T* ptr, const T& value);
     static void construct(T* ptr, T&& value);
 
-    template <class... Args>
+    template <typename ... Args>
     static void construct(T* ptr, Args&& ...args);
 
     static void destroy(T* ptr);
     static void destroy(T* first, T* last);
 
 };
+
+template <typename T>
+T* allocator<T>::allocate() {
+    return static_cast<T*>(pool_alloc::allocate(sizeof(T)));
+}
+
+template <typename T>
+T* allocator<T>::allocate(size_type n) {
+    if (n == 0)
+        return nullptr;
+    return static_cast<T*>(pool_alloc::allocate(n * sizeof(T)));
+}
+
+template <typename T>
+void allocator<T>::deallocate(T* ptr) {
+    if (ptr == nullptr)
+        return ;
+    pool_alloc::deallocate(p, sizeof(T));
+}
+
+template <typename T>
+void allocator<T>::deallocate(T* ptr, size_type n) {
+    if (ptr == nullptr || n == 0)
+        return ;
+    pool_alloc::deallocate(p, n * sizeof(T));
+}
+
+template <typename T>
+void allocator<T>::construct(T* ptr) {
+    zephyr::construct(ptr);
+}
+
+template <typename T>
+void allocator<T>::construct(T* ptr, const T& value) {
+    zephyr::construct(ptr, value);
+}
+
+template <typename T>
+void allocator<T>::construct(T* ptr, T&& value) {
+    zephyr::construct(ptr, std::move(value));
+}
+
+template <typename T>
+template <typename ...Args>
+void allocator<T>::construct(T* ptr, Args&& ...args) {
+    zephyr::construct(ptr, std::forward<Args>(args)...)
+}
+
+template <typename T>
+void allocator<T>::destroy(T* ptr) {
+    zephyr::destroy(ptr);
+}
+
+template <typename T>
+void allocator<T>::destroy(T* first, T* last) {
+    zephyr::destroy(first, last);
+}
+
+
 
 
 
