@@ -99,7 +99,7 @@ int popcount(long long n) {
 
 
 
-}
+} // namespace zephyr
 
 
 #endif //ZEPHYR_INTERNAL_BIT_H

@@ -6,12 +6,18 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -g -std=c++11 -Wall")
 
 set(LIB_SRC
-        ${CMAKE_SOURCE_DIR}/src/include/memory/pool_alloc.hpp
-        ${CMAKE_SOURCE_DIR}/src/include/math/internal_bit.hpp
-        ${CMAKE_SOURCE_DIR}/src/include/memory/allocator.h
-        ${CMAKE_SOURCE_DIR}/src/include/memory/construct.h
-    )
-add_executable(zephyr ${LIB_SRC}
-        tests/alloc_test.cpp
+        src/include/memory/pool_alloc.h
+        src/include/math/internal_bit.hpp
+        src/include/memory/allocator.h
+        src/include/memory/construct.h
+        src/include/math/math.h
+        src/include/memory/loki_alloc.h
+)
+
+set(LIB_TEST
+        tests/pool_alloc_test.cpp
         tests/math_test.cpp
-    )
+)
+
+
+add_executable(zephyr ${LIB_SRC} tests/test.cpp)
