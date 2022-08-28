@@ -6,12 +6,12 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -g -std=c++11 -Wall")
 
 set(LIB_SRC
-        src/include/memory/pool_alloc.h
+        src/include/memory/pool_allocator.h
         src/include/math/internal_bit.hpp
         src/include/memory/allocator.h
         src/include/memory/construct.h
         src/include/math/math.h
-        src/include/memory/loki_alloc.h
+        src/include/memory/loki_allocator.h
 )
 
 set(LIB_TEST

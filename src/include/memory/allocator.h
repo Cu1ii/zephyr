@@ -5,7 +5,7 @@
 #ifndef ZEPHYR_ALLOCATOR_H
 #define ZEPHYR_ALLOCATOR_H
 
-#include "pool_alloc.h"
+#include "pool_allocator.h"
 #include "construct.h"
 
 // 这个头文件包含一个模板类 allocator，用于管理内存的分配、释放，对象的构造、析构
@@ -48,28 +48,28 @@ public:
 
 template <typename T>
 T* allocator<T>::allocate() {
-    return static_cast<T*>(pool_alloc::allocate(sizeof(T)));
+    return static_cast<T*>(pool_allocator::allocate(sizeof(T)));
 }
 
 template <typename T>
 T* allocator<T>::allocate(size_type n) {
     if (n == 0)
         return nullptr;
-    return static_cast<T*>(pool_alloc::allocate(n * sizeof(T)));
+    return static_cast<T*>(pool_allocator::allocate(n * sizeof(T)));
 }
 
 template <typename T>
 void allocator<T>::deallocate(T* ptr) {
     if (ptr == nullptr)
         return ;
-    pool_alloc::deallocate(p, sizeof(T));
+    pool_allocator::deallocate(p, sizeof(T));
 }
 
 template <typename T>
 void allocator<T>::deallocate(T* ptr, size_type n) {
     if (ptr == nullptr || n == 0)
         return ;
-    pool_alloc::deallocate(p, n * sizeof(T));
+    pool_allocator::deallocate(p, n * sizeof(T));
 }
 
 template <typename T>

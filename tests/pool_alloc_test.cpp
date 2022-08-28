@@ -4,8 +4,8 @@
 
 #include <iostream>
 
-#include "../src/include/memory/pool_alloc.h"
-#include "../src/include/memory/loki_alloc.h"
+#include "../src/include/memory/pool_allocator.h"
+#include "../src/include/memory/loki_allocator.h"
 
 long long count_new;
 long long times_count;
@@ -44,12 +44,12 @@ void alloc_test() {
     }
 
     for (int i = 0; i < MAX_NEW; i++) {
-        p[i] = zephyr::pool_alloc::allocate(16);
+        p[i] = zephyr::pool_allocator::allocate(16);
     }
     std::cout << "::times_count = " << times_count << " ::count_new = " << count_new << std::endl;
     std::cout << "-------------------------------------------------------------------------" << std::endl;
     for (int i = 0; i < MAX_NEW; i++) {
-        zephyr::pool_alloc::deallocate(p[i], 16);
+        zephyr::pool_allocator::deallocate(p[i], 16);
     }
 }
 

@@ -2,8 +2,8 @@
 // Created by Cu1 on 2022/8/2.
 //
 
-#ifndef ZEPHYR_POOL_ALLOC_H
-#define ZEPHYR_POOL_ALLOC_H
+#ifndef ZEPHYR_POOL_ALLOCATOR_H
+#define ZEPHYR_POOL_ALLOCATOR_H
 
 #include <new>
 #include <stddef.h>
@@ -21,7 +21,7 @@ enum { Z_align = 8 };
 enum { Z_max_bytes = 128 };
 enum { Z_free_list_size = Z_max_bytes / Z_align };
 
-class pool_alloc {
+class pool_allocator {
 private:
 
     static char* Z_heap_start;
@@ -43,23 +43,23 @@ private:
     static char*  Z_chunk_alloc(size_t size, size_t& nblock);
 };
 
-char* pool_alloc::Z_heap_start = nullptr;
-char* pool_alloc::Z_heap_end = nullptr;
-size_t pool_alloc::Z_heap_size = 0;
+char* pool_allocator::Z_heap_start = nullptr;
+char* pool_allocator::Z_heap_end = nullptr;
+size_t pool_allocator::Z_heap_size = 0;
 
-Obj* pool_alloc::Z_free_list[Z_free_list_size] = {
+Obj* pool_allocator::Z_free_list[Z_free_list_size] = {
     nullptr, nullptr, nullptr, nullptr,
     nullptr, nullptr, nullptr, nullptr,
     nullptr, nullptr, nullptr, nullptr,
     nullptr, nullptr, nullptr, nullptr,
 };
 
-size_t pool_alloc::Z_align_size_list[Z_free_list_size] = {
+size_t pool_allocator::Z_align_size_list[Z_free_list_size] = {
         8, 16, 24, 32, 40, 48, 56, 64,
         72, 80, 88, 96, 104, 112, 120, 128,
 };
 
-inline void* pool_alloc::allocate(size_t _size) {
+inline void* pool_allocator::allocate(size_t _size) {
     if (_size > static_cast<size_t>(Z_max_bytes))
         return ::operator new(Z_max_bytes);
     Obj*& free_list_index = Z_free_list[Z_freelist_index(_size)];
@@ -72,7 +72,7 @@ inline void* pool_alloc::allocate(size_t _size) {
     return result;
 }
 
-inline void pool_alloc::deallocate(void* p, size_t _size) {
+inline void pool_allocator::deallocate(void* p, size_t _size) {
     if (_size > static_cast<size_t>(Z_max_bytes)) {
         ::operator delete(p);
         return;
@@ -82,12 +82,12 @@ inline void pool_alloc::deallocate(void* p, size_t _size) {
     Z_free_list[Z_freelist_index(_size)] = q;
 }
 
-inline void* pool_alloc::reallocate(void* p, size_t old_size, size_t new_size) {
+inline void* pool_allocator::reallocate(void* p, size_t old_size, size_t new_size) {
     deallocate(p, old_size);
     return allocate(new_size);
 }
 
-inline size_t pool_alloc::Z_round_up(size_t _size) {
+inline size_t pool_allocator::Z_round_up(size_t _size) {
     size_t l = 0, r = 15, res = 0;
 
     while (l <= r) {
@@ -101,12 +101,12 @@ inline size_t pool_alloc::Z_round_up(size_t _size) {
     return res;
 }
 
-inline size_t pool_alloc::Z_freelist_index(size_t _size) {
+inline size_t pool_allocator::Z_freelist_index(size_t _size) {
     return Z_round_up(_size) / 8 - 1;
 }
 
 
-void* pool_alloc::Z_refill(size_t n) {
+void* pool_allocator::Z_refill(size_t n) {
     size_t nblock = 10;
     char* c = Z_chunk_alloc(n, nblock);
     if (nblock == 1)
@@ -125,7 +125,7 @@ void* pool_alloc::Z_refill(size_t n) {
     return result;
 }
 
-char* pool_alloc::Z_chunk_alloc(size_t size, size_t& nblock) {
+char* pool_allocator::Z_chunk_alloc(size_t size, size_t& nblock) {
     char* result = nullptr;
     size_t need_size = size * nblock;
     size_t heap_size = Z_heap_end - Z_heap_start;
@@ -172,4 +172,4 @@ char* pool_alloc::Z_chunk_alloc(size_t size, size_t& nblock) {
 }
 
 
-#endif //ZEPHYR_POOL_ALLOC_H
+#endif //ZEPHYR_POOL_ALLOCATOR_H
