@@ -169,7 +169,23 @@ char* pool_allocator::Z_chunk_alloc(size_t size, size_t& nblock) {
     return Z_chunk_alloc(size, nblock);
 }
 
+
+template<typename T>
+class pool_alloc {
+
+public:
+
+static T* allocate(size_t size) {
+    return static_cast<T*>(pool_allocator::allocate(size * sizeof(T)));
 }
+
+static void deallocate(T* p, size_t n = 1) {
+    pool_allocator::deallocate(static_cast<void*>(p), n * sizeof(T));
+}
+
+};
+
+} // namespace zephyr
 
 
 #endif //ZEPHYR_POOL_ALLOCATOR_H

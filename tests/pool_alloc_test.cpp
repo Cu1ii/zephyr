@@ -23,7 +23,13 @@ namespace zephyr
 namespace alloc_test
 {
 
-void* p[1000005];
+struct test_node {
+    test_node* data1;
+    test_node* data2;
+    double data3;
+};
+
+test_node* p[1000005];
 
 void alloc_test() {
 
@@ -31,26 +37,44 @@ void alloc_test() {
 
     count_new = 0;
     times_count = 0;
+
+    std::cout << "test_node size = " << sizeof(test_node) << std::endl;
+
     for (int i = 0; i < MAX_NEW; i++) {
-        p[i] = ::operator new(16);
+        p[i] = new test_node;
     }
-    std::cout << "::times_count = " << times_count << " ::count_new = " << count_new << std::endl;
+    std::cout << "new result: times_count = " << times_count << " count_new = " << count_new << std::endl;
     std::cout << "-------------------------------------------------------------------------" << std::endl;
 
     count_new = 0;
     times_count = 0;
     for (int i = 0; i < MAX_NEW; i++) {
-        ::operator delete(p[i]);
+        delete p[i];
     }
 
     for (int i = 0; i < MAX_NEW; i++) {
-        p[i] = zephyr::pool_allocator::allocate(16);
+        p[i] = zephyr::pool_alloc<test_node>::allocate(1);
     }
-    std::cout << "::times_count = " << times_count << " ::count_new = " << count_new << std::endl;
+    std::cout << "zephyr::pool_alloc result: times_count = " << times_count << " count_new = " << count_new << std::endl;
     std::cout << "-------------------------------------------------------------------------" << std::endl;
+
     for (int i = 0; i < MAX_NEW; i++) {
-        zephyr::pool_allocator::deallocate(p[i], 16);
+        zephyr::pool_alloc<test_node>::deallocate(p[i]);
     }
+
+    times_count = 0, count_new = 0;
+
+//    for (int i = 0; i < MAX_NEW; i++) {
+//        p[i] = zephyr::loki_alloc<test_node>::allocate();
+//    }
+
+    p[0] = loki_alloc<test_node>::allocate();
+    std::cout << "zephyr::loki_alloc: times_count = " << times_count << " count_new = " << count_new << std::endl;
+    std::cout << "-------------------------------------------------------------------------" << std::endl;
+
+//    for (int i = 0; i < MAX_NEW; i++)
+//        zephyr::loki_alloc<test_node>::deallocate(p[i]);
+   // zephyr::loki_alloc<test_node>::deallocate(p[0]);
 }
 
 } // namespace zephyr::alloc_test
