@@ -64,17 +64,18 @@ void alloc_test() {
 
     times_count = 0, count_new = 0;
 
-//    for (int i = 0; i < MAX_NEW; i++) {
-//        p[i] = zephyr::loki_alloc<test_node>::allocate();
-//    }
+    for (int i = 0; i < MAX_NEW; i++) {
+        p[i] = zephyr::loki_alloc<test_node>::allocate();
+    }
 
-    p[0] = loki_alloc<test_node>::allocate();
+    //p[0] = loki_alloc<test_node>::allocate();
     std::cout << "zephyr::loki_alloc: times_count = " << times_count << " count_new = " << count_new << std::endl;
     std::cout << "-------------------------------------------------------------------------" << std::endl;
 
-//    for (int i = 0; i < MAX_NEW; i++)
-//        zephyr::loki_alloc<test_node>::deallocate(p[i]);
-   // zephyr::loki_alloc<test_node>::deallocate(p[0]);
+    std::cout << "before" << std::endl;
+    for (int i = 0; i < MAX_NEW; i++)
+        zephyr::loki_alloc<test_node>::deallocate(p[i]);
+    std::cout << "after" << std::endl;
 }
 
 } // namespace zephyr::alloc_test

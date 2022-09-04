@@ -17,9 +17,10 @@ namespace zephyr
 struct chunk {
 
 public:
-    unsigned char first_available_block_;
-    size_t block_available_;
+
     unsigned char* p_data_;
+    size_t block_available_;
+    unsigned char first_available_block_;
 
 public:
 
@@ -30,29 +31,26 @@ public:
         unsigned char* p = p_data_;
         for (; i != blocks_; p += block_size_) {
             *p = ++i;
-            std::cout << "p = " << (void*)p << " i = " << (int)i << std::endl;
+            //std::cout << "p = " << (void*)p << " i = " << (int)i << std::endl;
         }
-        std::cout << "reset(size_t block_size_, size_t blocks_)::p_data_ = " << (void*)p_data_ << std::endl;
-        std::cout << "reset(size_t block_size_, size_t blocks_)::*p_data_ = " << (int)*p_data_ << std::endl;
+//        std::cout << "reset(size_t block_size_, size_t blocks_)::p_data_ = " << (void*)p_data_ << std::endl;
+//        std::cout << "reset(size_t block_size_, size_t blocks_)::*p_data_ = " << (int)*p_data_ << std::endl;
     }
 
     void init(size_t block_size_, unsigned char blocks_) {
         //DEBUG
-        std::cout << "init(size_t block_size_, size_t blocks_)::block_size_ = " << block_size_ << " blocks_ = " << (unsigned int)blocks_ << std::endl;
-        try {
-            p_data_ = new unsigned char[block_size_ * blocks_];
-        }
-        catch (...) {
-            std::cout << "memory not enough" << std::endl;
-            release();
-        }
+//        std::cout << "init(size_t block_size_, size_t blocks_)::block_size_ = " << block_size_ << " blocks_ = " << (unsigned int)blocks_ << std::endl;
+        p_data_ = static_cast<unsigned char*>(::operator new(block_size_ * blocks_)) ;
         // DEBUG
-        std::cout << "init(size_t block_size_, size_t blocks_):: chunk: init = " << block_size_ * blocks_ << std::endl;
-        std::cout << "init(size_t block_size_, size_t blocks_):: p_data_ = " << (void*)p_data_ << std::endl;
+//        std::cout << "init(size_t block_size_, size_t blocks_):: chunk: init = " << block_size_ * blocks_ << std::endl;
+//        std::cout << "init(size_t block_size_, size_t blocks_):: p_data_ = " << (void*)p_data_ << std::endl;
         reset(block_size_, blocks_);
     }
 
-    void release() { delete[] p_data_; }
+    void release() {
+        if (p_data_)
+            delete p_data_;
+    }
 
 
 public:
@@ -63,36 +61,56 @@ public:
         init(block_size_, blocks_);
     }
 
+    chunk(chunk&& other)
+        : p_data_(other.p_data_),
+        block_available_(other.block_available_),
+        first_available_block_(other.first_available_block_)
+    {
+        other.p_data_ = nullptr,
+        other.block_available_ = 0,
+        other.first_available_block_ = 0;
+    }
+
+    chunk& operator=(chunk&& rhs) {
+        p_data_ = rhs.p_data_,
+        block_available_ = rhs.block_available_,
+        first_available_block_ = rhs.first_available_block_;
+
+        rhs.p_data_ = nullptr,
+        rhs.block_available_ = 0,
+        rhs.first_available_block_ = 0;
+    }
+
     void* allocate(size_t block_size_) {
         if (!block_available_) return nullptr;
 
         // DEBUG
-        std::cout << "allocate(size_t block_size_)::this = " << this << std::endl;
-
-        // DEBUG
-        std::cout << "allocate(size_t block_size_)::p_data_ = " << (void*)p_data_ << std::endl;
-        std::cout << "allocate(size_t block_size_)::*p_data_ = " << (unsigned int)*p_data_ << std::endl;
-
-        // DEBUG
-        std::cout << "allocate(size_t block_size_)::block_available_ = " << block_available_ << std::endl;
-        std::cout << "allocate(size_t block_size_)::first_available_block_ = " << (unsigned int)first_available_block_ << std::endl;
+//        std::cout << "allocate(size_t block_size_)::this = " << this << std::endl;
+//
+//        // DEBUG
+//        std::cout << "allocate(size_t block_size_)::p_data_ = " << (void*)p_data_ << std::endl;
+//        std::cout << "allocate(size_t block_size_)::*p_data_ = " << (unsigned int)*p_data_ << std::endl;
+//
+//        // DEBUG
+//        std::cout << "allocate(size_t block_size_)::block_available_ = " << block_available_ << std::endl;
+//        std::cout << "allocate(size_t block_size_)::first_available_block_ = " << (unsigned int)first_available_block_ << std::endl;
 
         unsigned char* p_result_ =
                 p_data_ + (block_size_ * first_available_block_);
 
-        // DEBUG
-        std::cout << "allocate(size_t block_size_)::p_data_ = " << (void*)p_data_ << std::endl;
-        std::cout << "allocate(size_t block_size_)::p_result_ = " << (void*)p_result_ << std::endl;
-        std::cout << "allocate(size_t block_size_)::*p_data_ = " << (unsigned int)*p_data_ << std::endl;
-        std::cout << "allocate(size_t block_size_)::*p_result_ = " << (unsigned int)*p_result_ << std::endl;
+//        // DEBUG
+//        std::cout << "allocate(size_t block_size_)::p_data_ = " << (void*)p_data_ << std::endl;
+//        std::cout << "allocate(size_t block_size_)::p_result_ = " << (void*)p_result_ << std::endl;
+//        std::cout << "allocate(size_t block_size_)::*p_data_ = " << (unsigned int)*p_data_ << std::endl;
+//        std::cout << "allocate(size_t block_size_)::*p_result_ = " << (unsigned int)*p_result_ << std::endl;
 
 
         first_available_block_ = *p_result_;
         --block_available_;
 
-        // DEBUG
-        std::cout << "allocate(size_t block_size_)::block_available_ = " << block_available_ << std::endl;
-        std::cout << "allocate(size_t block_size_)::first_available_block_ = " << (unsigned int)first_available_block_ << std::endl;
+//        // DEBUG
+//        std::cout << "allocate(size_t block_size_)::block_available_ = " << block_available_ << std::endl;
+//        std::cout << "allocate(size_t block_size_)::first_available_block_ = " << (unsigned int)first_available_block_ << std::endl;
 
         return p_result_;
     }
@@ -106,6 +124,8 @@ public:
     }
 
     ~chunk() { release(); }
+
+
 
 };
 
@@ -122,6 +142,7 @@ public:
     fixed_allocator(size_t block_size, unsigned char num_blocks)
         : alloc_chunk_(nullptr),
           dealloc_chunk_(nullptr),
+          chunks_(),
           block_size_(block_size),
           num_blocks_(num_blocks)
     {}
@@ -135,8 +156,8 @@ public:
                     alloc_chunk_ = &chunks_.back();
                     dealloc_chunk_ = &chunks_.front();
 
-                    //DEBUG
-                    std::cout << "allocate()::alloc_chunk_ = " << alloc_chunk_ << " " << dealloc_chunk_ << std::endl;
+//                    //DEBUG
+//                    std::cout << "allocate()::alloc_chunk_ = " << alloc_chunk_ << " " << dealloc_chunk_ << std::endl;
 
                     break;
                 }
@@ -185,27 +206,28 @@ private:
     }
 
     void do_deallocate(void* p) {
+        if (dealloc_chunk_ == nullptr) return ;
         dealloc_chunk_->deallocate(p, block_size_);
-        if (dealloc_chunk_->block_available_ == num_blocks_) {
-            chunk& last_chunk = chunks_.back();
-            if (&last_chunk == dealloc_chunk_) {
-                if (chunks_.size() > 1 && dealloc_chunk_[-1].block_available_ == num_blocks_) {
-                    last_chunk.release();
-                    chunks_.pop_back();
-                    alloc_chunk_ = &chunks_.front();
-                }
-                return ;
-            }
-            if (last_chunk.block_available_ == num_blocks_) {
-                last_chunk.release();
-                chunks_.pop_back();
-                alloc_chunk_ = &chunks_.front();
-            }
-            else {
-                std::swap(*dealloc_chunk_, last_chunk);
-                alloc_chunk_ = &chunks_.back();
-            }
-        }
+//        if (dealloc_chunk_->block_available_ == num_blocks_) {
+//            chunk& last_chunk = chunks_.back();
+//            if (&last_chunk == dealloc_chunk_) {
+//                if (chunks_.size() > 1 && dealloc_chunk_[-1].block_available_ == num_blocks_) {
+//                    last_chunk.release();
+//                    chunks_.pop_back();
+//                    alloc_chunk_ = dealloc_chunk_ = &chunks_.front();
+//                }
+//                return ;
+//            }
+//            if (last_chunk.block_available_ == num_blocks_) {
+//                last_chunk.release();
+//                chunks_.pop_back();
+//                alloc_chunk_ = dealloc_chunk_;
+//            }
+//            else {
+//                std::swap(*dealloc_chunk_, last_chunk);
+//                alloc_chunk_ = &chunks_.back();
+//            }
+//        }
     }
 };
 
@@ -228,7 +250,7 @@ private:
 };
 
 template <typename T>
-unsigned char loki_alloc<T>::base_num_blocks_ = 5;
+unsigned char loki_alloc<T>::base_num_blocks_ = 128;
 
 template <typename T>
 fixed_allocator loki_alloc<T>::allocator(sizeof(T), base_num_blocks_);
