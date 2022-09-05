@@ -75,6 +75,9 @@ void alloc_test() {
     std::cout << "before" << std::endl;
     for (int i = 0; i < MAX_NEW; i++)
         zephyr::loki_alloc<test_node>::deallocate(p[i]);
+//    zephyr::loki_alloc<test_node>::deallocate(p[6]);
+
+
     std::cout << "after" << std::endl;
 }
 

@@ -48,8 +48,12 @@ public:
     }
 
     void release() {
-        if (p_data_)
+        if (p_data_) {
             delete p_data_;
+            p_data_ = nullptr,
+            block_available_ = 0,
+            first_available_block_ = 0;
+        }
     }
 
 
@@ -79,6 +83,7 @@ public:
         rhs.p_data_ = nullptr,
         rhs.block_available_ = 0,
         rhs.first_available_block_ = 0;
+        return *this;
     }
 
     void* allocate(size_t block_size_) {
@@ -124,8 +129,6 @@ public:
     }
 
     ~chunk() { release(); }
-
-
 
 };
 
@@ -208,26 +211,87 @@ private:
     void do_deallocate(void* p) {
         if (dealloc_chunk_ == nullptr) return ;
         dealloc_chunk_->deallocate(p, block_size_);
-//        if (dealloc_chunk_->block_available_ == num_blocks_) {
-//            chunk& last_chunk = chunks_.back();
-//            if (&last_chunk == dealloc_chunk_) {
-//                if (chunks_.size() > 1 && dealloc_chunk_[-1].block_available_ == num_blocks_) {
-//                    last_chunk.release();
-//                    chunks_.pop_back();
-//                    alloc_chunk_ = dealloc_chunk_ = &chunks_.front();
-//                }
-//                return ;
-//            }
-//            if (last_chunk.block_available_ == num_blocks_) {
-//                last_chunk.release();
-//                chunks_.pop_back();
-//                alloc_chunk_ = dealloc_chunk_;
-//            }
-//            else {
-//                std::swap(*dealloc_chunk_, last_chunk);
-//                alloc_chunk_ = &chunks_.back();
-//            }
+
+//        // DEBUG
+//        std::cout << "num_blocks_ = " << (unsigned int)num_blocks_ << std::endl;
+//        for (int i = 0; i < chunks_.size(); i++) {
+//            if (&chunks_[i] == dealloc_chunk_)
+//                std::cout << "deallocate_chunk_pos = " << i << std::endl;
 //        }
+//
+//        for (int i = 0; i < chunks_.size(); i++) {
+//            std::cout << "i = " << i << " chunks_[i].block_available_ = " << chunks_[i].block_available_ << std::endl;
+//        }
+//        std::cout << "--------------0------------------" << std::endl;
+
+        if (dealloc_chunk_->block_available_ == num_blocks_) {
+            chunk& last_chunk = chunks_.back();
+
+            // DEBUG
+            //std::cout << "&last_chunk = " << &last_chunk << " dealloc_chunk_ = " << dealloc_chunk_ << std::endl;
+
+            if (&last_chunk == dealloc_chunk_) {
+                if (chunks_.size() > 1 && dealloc_chunk_[-1].block_available_ == num_blocks_) {
+                    last_chunk.release();
+                    chunks_.pop_back();
+                    alloc_chunk_ = dealloc_chunk_ = &chunks_.front();
+                }
+//                // DEBUG
+//                for (int i = 0; i < chunks_.size(); i++) {
+//                    if (&chunks_[i] == dealloc_chunk_)
+//                        std::cout << "deallocate_chunk_pos = " << i << std::endl;
+//                }
+//
+//                for (int i = 0; i < chunks_.size(); i++) {
+//                    std::cout << "i = " << i << " chunks_[i].block_available_ = " << chunks_[i].block_available_ << std::endl;
+//                }
+//                std::cout << "--------------1------------------" << std::endl;
+
+                return ;
+            }
+
+//            // DEBUG
+//            std::cout << "*dealloc_chunk_.block_available_ = " << (*dealloc_chunk_).block_available_
+//                      << " last_chunk.block_available_ " << last_chunk.block_available_ << std::endl;
+//            std::cout << "&last_chunk = " << &last_chunk << " dealloc_chunk_ = " << dealloc_chunk_ << std::endl;
+
+            if (last_chunk.block_available_ == num_blocks_) {
+
+//                // DEBUG
+//                std::cout << "&last_chunk = " << &last_chunk << " dealloc_chunk_ = " << dealloc_chunk_ << std::endl;
+//                std::cout << "last_chunk.block_available_ = " << last_chunk.block_available_ << std::endl;
+//                std::cout << "chunks_.size() = " << chunks_.size() << std::endl;
+
+                last_chunk.release();
+
+                chunks_.pop_back();
+                alloc_chunk_ = dealloc_chunk_;
+            }
+            else {
+
+//                // DEBUG
+//                std::cout << "&last_chunk = " << &last_chunk << " dealloc_chunk_ = " << dealloc_chunk_ << std::endl;
+
+                std::swap(*dealloc_chunk_, last_chunk);
+
+//                // DEBUG
+//                std::cout << "*dealloc_chunk_.block_available_ = " << (*dealloc_chunk_).block_available_
+//                    << " last_chunk.block_available_ " << last_chunk.block_available_ << std::endl;
+
+                alloc_chunk_ = &chunks_.back();
+            }
+
+//            // DEBUG
+//            for (int i = 0; i < chunks_.size(); i++) {
+//                if (&chunks_[i] == dealloc_chunk_)
+//                    std::cout << "deallocate_chunk_pos = " << i << std::endl;
+//            }
+//
+//            for (int i = 0; i < chunks_.size(); i++) {
+//                std::cout << "i = " << i << " chunks_[i].block_available_ = " << chunks_[i].block_available_ << std::endl;
+//            }
+//            std::cout << "--------------2------------------" << std::endl;
+        }
     }
 };
 
@@ -250,7 +314,7 @@ private:
 };
 
 template <typename T>
-unsigned char loki_alloc<T>::base_num_blocks_ = 128;
+unsigned char loki_alloc<T>::base_num_blocks_ = 255;
 
 template <typename T>
 fixed_allocator loki_alloc<T>::allocator(sizeof(T), base_num_blocks_);
