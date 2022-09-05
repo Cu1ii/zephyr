@@ -5,8 +5,18 @@
 #ifndef ZEPHYR_DEBUG_H
 #define ZEPHYR_DEBUG_H
 
+#if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
+#define ZEPHYR_DEBUG_UNIX
+#elif defined(_MSC_VER)
+#define ZEPHYR_DEBUG_WINDOWS
+#endif
+
 #include <iostream>
 #include <cstdio>
+
+#ifdef ZEPHYR_DEBUG_UNIX
+#include <unistd.h>
+#endif
 
 namespace zephyr
 {
