@@ -12,7 +12,7 @@ set(LIB_SRC
         src/include/memory/construct.h
         src/include/math/math.h
         src/include/memory/loki_allocator.h
-        src/include/util/debug.h)
+        src/include/util/debug.h tests/debug_test.cpp)
 
 set(LIB_TEST
         tests/alloc_test.cpp
