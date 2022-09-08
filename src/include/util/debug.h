@@ -12,12 +12,23 @@
 #endif
 
 #include <iostream>
+#include <ios>
+#include <iomanip>
+#include <chrono>
 #include <cstdio>
 #include <vector>
+#include <type_traits>
+#include <memory>
+#include <ctime>
+#include <tuple>
+#include <sstream>
+
 
 #ifdef ZEPHYR_DEBUG_UNIX
 #include <unistd.h>
 #endif
+
+struct time {};
 
 namespace zephyr
 {
@@ -189,7 +200,298 @@ inline std::string get_type_name(type_tag<integral_print_formatter<T>>) {
     return type_name<T>();
 }
 
+struct nonesuch {
+    nonesuch() = delete;
+    ~nonesuch() = delete;
+    nonesuch(const nonesuch&) = delete;
+    void operator=(const nonesuch&) = delete;
+};
 
+template <typename...>
+using void_t = void;
+
+template <typename Default,
+          typename AlwatsVoid,
+          template<typename... name>
+          typename Op,
+          typename... Args>
+struct detector {
+    using value_t = std::false_type;
+    using type = Default;
+};
+
+template <typename Default,
+          template <typename...>
+          typename Op,
+          typename... Args>
+struct detector<Default, void_t<Op<Args...>>, Op, Args...> {
+    using value_t =std::true_type;
+    using type = Op<Args...>;
+};
+
+template <template <typename...>
+          typename Op,
+          typename... Args>
+using is_detected = typename detector<nonesuch, void, Op, Args...>::value_t;
+
+template <typename T>
+constexpr auto size(const T& c) -> decltype(c.size()) {
+    return c.size();
+}
+
+template <typename T, size_t N>
+constexpr size_t size(const T (&)[N]) {
+    return N;
+}
+
+template <typename Container>
+using container_begin_t = decltype(std::begin(std::declval<Container>()));
+
+template <typename Container>
+using container_end_t = decltype(std::end(std::declval<Container>()));
+
+template <typename Container>
+using container_size_t = decltype(size(std::declval<Container>()));
+
+
+template <typename T>
+struct is_container {
+    static constexpr bool value =
+            is_detected<container_begin_t, T>::value &&
+            is_detected<container_end_t, T>::value &&
+            is_detected<container_size_t, T>::value &&
+            !std::is_same<std::string,
+                          typename std::remove_cv<
+                                  typename std::remove_reference<T>::type>::type>::value;
+};
+
+template <typename T>
+using ostream_operator_t =
+    decltype(std::declval<std::ostream&>() << std::declval<T>());
+
+template <typename T>
+struct has_ostream_operator
+        : is_detected<ostream_operator_t, T>
+{};
+
+template <typename T>
+struct print_type {};
+
+template <typename T>
+inline void pretty_print(std::ostream& stream, const T& value, std::true_type);
+
+template <typename T>
+inline void pretty_print(std::ostream& stream, const T& value, std::false_type);
+
+template <typename T>
+inline typename std::enable_if<!is_container<const T&>::value &&
+                                !std::is_enum<T>::value, bool>::type
+pretty_print(std::ostream& stream, const T& value);
+
+inline bool pretty_print(std::ostream& stream,const bool value);
+
+inline bool pretty_print(std::ostream& stream,const char value);
+
+template <typename T>
+inline bool pretty_print(std::ostream& stream, const T* const value);
+
+template <typename T, typename Deleter>
+inline bool pretty_print(std::ostream& stream,
+                         std::unique_ptr<T, Deleter>& value);
+
+template <typename T>
+inline bool pretty_print(std::ostream& stream, std::shared_ptr<T>& value);
+
+template <size_t N>
+inline bool pretty_print(std::ostream& stream, const char (&value)[N]);
+
+template <>
+inline bool pretty_print(std::ostream& stream, const char* const value);
+
+template <typename... T>
+inline bool pretty_print(std::ostream& stream, const std::tuple<T...>& value);
+
+template <>
+inline bool pretty_print(std::ostream& stream, const std::tuple<>&);
+
+template <>
+inline bool pretty_print(std::ostream& stream, const struct time&);
+
+
+template <typename T>
+inline bool pretty_print(std::ostream& stream,
+                         const integral_print_formatter<T>& value);
+
+template <typename T>
+inline bool pretty_print(std::ostream& stream, const print_type<T>&);
+
+template <typename Enum>
+inline typename std::enable_if<std::is_enum<Enum>::value, bool>::type
+        pretty_print(std::ostream& stream, const Enum& value);
+
+inline bool pretty_print(std::ostream& stream, const std::string& value);
+
+template <typename T1, typename T2>
+inline bool pretty_print(std::ostream& stream, const std::pair<T1, T2>& value);
+
+
+template <typename Container>
+inline typename std::enable_if<is_container<const Container&>::value, bool>::type
+pretty_print(std::ostream& stream, const Container& value);
+
+template <typename T>
+inline void pretty_print(std::ostream& stream, const T& value, std::true_type) {
+    stream << value;
+}
+
+template <typename T>
+inline void pretty_print(std::ostream& stream, const T& value, std::false_type) {
+    static_assert(has_ostream_operator<const T&>::value,
+                  "Type does not support the << ostream operator");
+}
+
+template <typename T>
+inline typename std::enable_if<!is_container<const T&>::value &&
+                                !std::is_enum<T>::value, bool>::type
+pretty_print(std::ostream& stream, const T& value) {
+    pretty_print(stream, value, typename has_ostream_operator<const T&>::type());
+    return true;
+}
+
+inline bool pretty_print(std::ostream& stream,const bool value) {
+    stream << std::boolalpha << value;
+    return true;
+}
+
+inline bool pretty_print(std::ostream& stream,const char value) {
+    const bool printable = (value >= 0x20 && value <= 0x7E);
+    if (printable) {
+        stream << "'" << value << "'";
+    }
+    else {
+        stream << "'\\x" << std::setw(2) << std::setfill('0') << std::hex
+            << std::uppercase << (0xFF & value) << "'";
+    }
+}
+
+template <typename T>
+inline bool pretty_print(std::ostream& stream, const T* const value) {
+    if (value == nullptr) {
+        stream << "nullptr";
+    }
+    else {
+        stream << value;
+    }
+    return true;
+}
+
+template <typename T, typename Deleter>
+inline bool pretty_print(std::ostream& stream,
+                         std::unique_ptr<T, Deleter>& value) {
+    pretty_print(stream, value.get());
+    return true;
+}
+
+template <typename T>
+inline bool pretty_print(std::ostream& stream, std::shared_ptr<T>& value) {
+    pretty_print(stream, value.get());
+    stream << " (use_count = " << value.use_count() << ")";
+    return true;
+}
+
+template <size_t N>
+inline bool pretty_print(std::ostream& stream, const char (&value)[N]) {
+    stream << value;
+    return false;
+}
+
+template <>
+inline bool pretty_print(std::ostream& stream, const char* const value) {
+    stream << '"' << value << '"';
+}
+
+template <size_t Idx>
+struct pretty_print_tuple {
+    template <typename... Ts>
+    static void print(std::ostream& stream, const std::tuple<Ts...>& tuple) {
+        pretty_print_tuple<Idx - 1>::print(stream, tuple);
+        stream << ", ";
+        pretty_print(stream, std::get<Idx>(tuple));
+    }
+};
+
+template <>
+struct pretty_print_tuple<0> {
+    template <typename... Ts>
+    static void print(std::ostream& stream, const std::tuple<Ts...>& tuple) {
+        pretty_print(stream, std::get<0>(tuple));
+    }
+};
+
+template <typename... T>
+inline bool pretty_print(std::ostream& stream, const std::tuple<T...>& value) {
+    stream << "{";
+    pretty_print_tuple<sizeof...(T) - 1>::print(stream, value);
+    stream << "}";
+}
+
+template <>
+inline bool pretty_print(std::ostream& stream, const std::tuple<>&) {
+    stream << "{ }";
+}
+
+template <>
+inline bool pretty_print(std::ostream& stream, const struct time&) {
+    using namespace std::chrono;
+    const auto now = system_clock::now();
+    const auto us =
+            duration_cast<microseconds>(now.time_since_epoch()).count() % 1000000;
+    const auto hms = system_clock::to_time_t(now);
+#if _MSC_VER >= 1600
+    struct tm t;
+    localtime_s(&t, &hms);
+    const std::tm* tm = &t;
+#else
+    const std::tm* tm = std::localtime(&hms);
+#endif
+    stream << "current time = " << std::put_time(tm, "%H:%M:%S") << '.'
+           << std::setw(6) << std::setfill('0') << us;
+    return false;
+}
+
+
+template <typename T>
+inline bool pretty_print(std::ostream& stream,
+                         const integral_print_formatter<T>& value) {
+
+}
+
+template <typename T>
+inline bool pretty_print(std::ostream& stream, const print_type<T>&) {
+
+}
+
+template <typename Enum>
+inline typename std::enable_if<std::is_enum<Enum>::value, bool>::type
+        pretty_print(std::ostream& stream, const Enum& value) {
+
+}
+
+inline bool pretty_print(std::ostream& stream, const std::string& value) {
+
+}
+
+template <typename T1, typename T2>
+inline bool pretty_print(std::ostream& stream, const std::pair<T1, T2>& value) {
+
+}
+
+
+template <typename Container>
+inline typename std::enable_if<is_container<const Container&>::value, bool>::type
+pretty_print(std::ostream& stream, const Container& value) {
+
+}
 
 
 
