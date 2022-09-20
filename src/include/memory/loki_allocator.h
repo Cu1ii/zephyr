@@ -132,6 +132,7 @@ public:
 
 };
 
+template <size_t Block_size, unsigned char Num_blocks = 255>
 class fixed_allocator {
 
 private:
@@ -142,6 +143,15 @@ private:
     unsigned char num_blocks_;
 
 public:
+
+    fixed_allocator()
+        :  alloc_chunk_(nullptr),
+           dealloc_chunk_(nullptr),
+           chunks_(),
+           block_size_(Block_size),
+           num_blocks_(Num_blocks)
+    { }
+
     fixed_allocator(size_t block_size, unsigned char num_blocks)
         : alloc_chunk_(nullptr),
           dealloc_chunk_(nullptr),
@@ -309,15 +319,12 @@ public:
     }
 
 private:
-    static fixed_allocator allocator;
-    static unsigned char base_num_blocks_;
+    static fixed_allocator<sizeof(T)> allocator;
 };
 
-template <typename T>
-unsigned char loki_alloc<T>::base_num_blocks_ = 255;
 
 template <typename T>
-fixed_allocator loki_alloc<T>::allocator(sizeof(T), base_num_blocks_);
+fixed_allocator<sizeof(T)> loki_alloc<T>::allocator;
 
 } // namespace zephyr
 
